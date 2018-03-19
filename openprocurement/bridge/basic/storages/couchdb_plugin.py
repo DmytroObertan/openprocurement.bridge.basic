@@ -4,6 +4,7 @@ from couchdb import Server, Session
 from couchdb.design import ViewDefinition
 from time import sleep
 from httplib import IncompleteRead
+from openprocurement.ocds.export.models import release_tender, modelsMap, callbacks
 
 
 LOGGER = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class CouchDBStorage(object):
         self.db_name = self.config['storage'].get('db_name', 'bridge_db')
         self.resource = resource
         self._prepare_couchdb()
-        self.view_path = '_design/{}/_view/by_dateModified'.format(
+        self.view_path = '_design/{}/_view/by_date'.format(
             self.resource)
 
     def _prepare_couchdb(self):
@@ -46,7 +47,7 @@ class CouchDBStorage(object):
             raise
 
         by_date_modified_view = ViewDefinition(
-            self.resource, 'by_dateModified', '''function(doc) {
+            self.resource, 'by_date', '''function(doc) {
         if (doc.doc_type == '%(resource)s') {
             var fields=['%(doc_type)sID'], data={};
             for (var i in fields) {
@@ -54,7 +55,7 @@ class CouchDBStorage(object):
                     data[fields[i]] = doc[fields[i]]
                 }
             }
-            emit(doc.dateModified, data);
+            emit(doc.date, data);
         }}''' % dict(resource=self.resource[:-1].title(),
                     doc_type=self.resource[:-1])
         )
@@ -107,7 +108,8 @@ class CouchDBStorage(object):
         :return: list: List of tuples with id, success: boolean, reason:
         if success is str: state else exception object
         """
-        res = self.db.update(bulk.values())
+        release_bulk = {key: release_tender(bulk[key], modelsMap, callbacks, 'qwe') for key in bulk}
+        res = self.db.update(release_bulk.values())
         results = []
         for success, doc_id, reason in res:
             if success:
@@ -116,7 +118,7 @@ class CouchDBStorage(object):
                 else:
                     reason = 'created'
             else:
-                if reason.message == u'New doc with oldest dateModified.':
+                if reason.message == u'New doc with oldest date':
                     success = True
                     reason = 'skipped'
             results.append((success, doc_id, reason))

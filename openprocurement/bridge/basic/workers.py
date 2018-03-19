@@ -235,9 +235,7 @@ class ResourceItemWorker(Greenlet):
 
     def _add_to_bulk(self, resource_item, queue_resource_item,
                      local_item_doc):
-        resource_item['doc_type'] = self.config['resource'][:-1].title()
         resource_item['_id'] = resource_item['id']
-
         # Setup service keys
         if local_item_doc:
             for k in local_item_doc:
@@ -245,28 +243,27 @@ class ResourceItemWorker(Greenlet):
                     resource_item[k] = local_item_doc[k]
 
         bulk_doc = self.bulk.get(resource_item['id'])
-
         if bulk_doc and bulk_doc['dateModified'] <\
-                resource_item['dateModified']:
+                resource_item['date']:
             logger.debug(
                 'Replaced {} in bulk {} previous {}, current {}'.format(
                     self.config['resource'][:-1], bulk_doc['id'],
-                    bulk_doc['dateModified'], resource_item['dateModified']),
+                    bulk_doc['date'], resource_item['date']),
                 extra={'MESSAGE_ID': 'skipped'})
             self.bulk[resource_item['id']] = resource_item
         elif bulk_doc and bulk_doc['dateModified'] >=\
-                resource_item['dateModified']:
+                resource_item['date']:
             logger.debug(
                 'Ignored dublicate {} {} in bulk: previous {}, current '
                 '{}'.format(
                     self.config['resource'][:-1], resource_item['id'],
-                    bulk_doc['dateModified'], resource_item['dateModified']),
+                    bulk_doc['date'], resource_item['date']),
                 extra={'MESSAGE_ID': 'skipped'})
         if not bulk_doc:
             self.bulk[resource_item['id']] = resource_item
             logger.debug('Put in bulk {} {} {}'.format(
                 self.config['resource'][:-1], resource_item['id'],
-                resource_item['dateModified']))
+                resource_item['date']))
         return
 
     def log_timeshift(self, resource_item):
@@ -351,13 +348,13 @@ class ResourceItemWorker(Greenlet):
                         self.add_to_retry_queue(queue_resource_item)
                         continue
                 if (local_item_doc and
-                        local_item_doc['dateModified'] >=
+                        local_item_doc['date'] >=
                         queue_resource_item['dateModified']):
                     logger.debug('Ignored {} {} QUEUE - {}, EDGE - {}'.format(
                         self.config['resource'][:-1],
                         queue_resource_item['id'],
                         queue_resource_item['dateModified'],
-                        local_item_doc['dateModified']),
+                        local_item_doc['date']),
                         extra={'MESSAGE_ID': 'skipped'})
                     self.api_clients_queue.put(api_client_dict)
                     continue
