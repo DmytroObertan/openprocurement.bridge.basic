@@ -12,7 +12,7 @@ requires = [
     'setuptools',
     'pycrypto',
     'openprocurement_client',
-    'openprocurement.ocds.export==1.0.1a2',
+    'openprocurement.ocds.export==1.0.1a3',
     'munch',
     'tzlocal',
     'pyyaml',
